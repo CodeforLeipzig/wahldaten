@@ -36,8 +36,8 @@ public class GeojsonTransformerMain {
 	private static final String WAHLKREIS_NR = "WahlkreisNr";
 	private static final String WAHLKREIS_NAME = "WahlkreisName";
 
-	private static final String OUT_WAHLKREISE_SACHSEN_GEOJSON = "docs/wahlkreise_sachsen.geojson";
-	private static final String OUT_GEMEINDEN_SACHSEN_GEOJSON = "docs/gemeinden_sachsen.geojson";
+	private static final String OUT_WAHLKREISE_SACHSEN_GEOJSON = "../docs/wahlkreise_sachsen.geojson";
+	private static final String OUT_GEMEINDEN_SACHSEN_GEOJSON = "../docs/gemeinden_sachsen.geojson";
 
 	private static int COORD_PRECISION = 10000000;
 
