@@ -408,6 +408,9 @@ public class GeojsonTransformerMain {
 		writeNameListToFile("out/names_all.csv", allNames);
 		writeNameListToFile("out/names_not_found.csv", notFoundNames);
 		writeNameListToFile("out/names_found.csv", foundNames);
+		List<String> allGiven = wahlkreisNrToGemeinden.values().stream().flatMap(value -> value.stream())
+				.collect(Collectors.toList());
+		writeNameListToFile("out/names_all_given.csv", allGiven);
 	}
 
 	private static void writeNameListToFile(String outFileName, List<String> names) throws IOException {
