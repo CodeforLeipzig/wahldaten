@@ -33,9 +33,9 @@
 			contentType: "application/json; charset=utf-8"
 		});
 
-		var colors = ["lightblue", "red"]
-		var names = [ "gemeinden", "wahlkreise" ];
-		var lineStrokeWeights = [2, 6];
+		var colors = ["lightblue", "red", "black"]
+		var names = [ "gemeinden", "wahlkreise", "wahlkreise2" ];
+		var lineStrokeWeights = [2, 6, 8];
 
 		var polygonMittelpunkt = function (arr) {
 			var arrToUse;
@@ -72,7 +72,7 @@
 					geojsonEbenenHover = null;
 				}
 			});
-		}
+		};
 
 		var eventHandlerGemeinden = function(geojsonEbene) {
 			var geojsonEbenenHover;
@@ -94,9 +94,11 @@
 					geojsonEbenenHover = null;
 				}
 			});
-		}
+		};
+		var wahlkreis2EventHandler = function(geojsonEbene) {
+		};
 
-		var eventHandlerFunctions = [ eventHandlerGemeinden, wahlkreisEventHandler ];
+		var eventHandlerFunctions = [ eventHandlerGemeinden, wahlkreisEventHandler, wahlkreis2EventHandler ];
 
 		var createGeoJsonLayer = function (data, colorName, weight) {
 			var style = {
@@ -145,10 +147,10 @@
 				"geodienste.sachsen.de webatlas WMS": webatlasLayer,
 				"geodienste.sachsen.de rohdop WMS 2012 - 2014": rohdopLayer2014,
 				"geodienste.sachsen.de rohdop WMS 2018": rohdopLayer,
-				"Wikipedia SVG Wahlkreise 2014": imageLayer
+				//"Wikipedia SVG Wahlkreise 2014": imageLayer
 			};
 			L.control.layers(baseMaps, overlayMaps).addTo(karte);
-			imageLayer.addTo(karte);
+			webatlasLayer.addTo(karte);
 			names.forEach(name => overlayMaps[layerLegendKey(name)].addTo(karte));
 			names.forEach(name => eventHandlerFunctions[names.indexOf(name)](overlayMaps[layerLegendKey(name)]));
 		};
