@@ -1,7 +1,13 @@
 package de.codefor.leipzig.wahldaten;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
 import org.geojson.Point;
 import org.geojson.*;
 
@@ -20,16 +26,21 @@ import java.util.stream.Collectors;
 
 public class GeojsonTransformerMain {
 
-    private static final String IN_GEMEINDEN_OSM_GEOJSON = "in/gemeinden_osm.geojson";
+    private static final String repoFolder = "/media/Daten/git/wahldaten/";
+    private static final String projectFolder = repoFolder + "de.codefor.leipzig.wahldaten/";
+    private static final String inFolder = projectFolder + "in/";
+    private static final String outFolder = projectFolder + "out/";
+    private static final String docsFolder = repoFolder + "docs/";
+    private static final String IN_GEMEINDEN_OSM_GEOJSON = inFolder + "gemeinden_osm.geojson";
     private static final String FEATURE_PROP_NAME = "name";
     private static final String WAHLKREIS_NR = "WahlkreisNr";
     private static final String WAHLKREIS_NAME = "WahlkreisName";
 
-    private static final String OUT_WAHLKREISE_SACHSEN_GEOJSON = "../docs/wahlkreise_sachsen.geojson";
-    private static final String OUT_GEMEINDEN_SACHSEN_GEOJSON = "../docs/gemeinden_sachsen.geojson";
+    private static final String OUT_WAHLKREISE_SACHSEN_GEOJSON = docsFolder + "wahlkreise_sachsen.geojson";
+    private static final String OUT_GEMEINDEN_SACHSEN_GEOJSON = docsFolder + "gemeinden_sachsen.geojson";
 
-    public static final String IN_WAHLKREISE_WRONGPOS_GEOJSON = "in/wahlkreise_wrongpos.geojson";
-    public static final String OUT_WAHLKREISE_2_SACHSEN_GEOJSON = "../docs/wahlkreise2_sachsen.geojson";
+    public static final String IN_WAHLKREISE_WRONGPOS_GEOJSON = inFolder + "wahlkreise_wrongpos.geojson";
+    public static final String OUT_WAHLKREISE_2_SACHSEN_GEOJSON = docsFolder + "wahlkreise2_sachsen.geojson";
 
     private static int COORD_PRECISION = 10000000;
 
@@ -238,11 +249,27 @@ public class GeojsonTransformerMain {
                 false);
         FeatureCollection featureCollection = getOsmFeatureCollection(objectMapper);
         FeatureCollection gemeindenGeojsonFeatures = writeGemeindenGeojson(objectMapper, featureCollection);
-        writeWahlkreisGeojsonFromSvg(objectMapper, gemeindenGeojsonFeatures);
+        //writeToMongoDB(gemeindenGeojsonFeatures, objectMapper, "sachsen_gemeinden");
+        FeatureCollection wahlkreisGeojsonFeatures = writeWahlkreisGeojsonFromSvg(objectMapper, gemeindenGeojsonFeatures);
+        //writeToMongoDB(wahlkreisGeojsonFeatures, objectMapper, "sachsen_wahlkreise_svg");
         writeWahlkreisGeojson(objectMapper, gemeindenGeojsonFeatures);
     }
 
-    private static void writeWahlkreisGeojsonFromSvg(ObjectMapper objectMapper, FeatureCollection gemeindenGeojsonFeatures) throws IOException {
+    private static void writeToMongoDB(FeatureCollection gemeindenGeojsonFeatures, ObjectMapper objectMapper, String collectionName) {
+        MongoClient mongoClient = MongoClients.create();
+        MongoDatabase database = mongoClient.getDatabase("joerg");
+        MongoCollection<Document> collection = database.getCollection(collectionName);
+        for (Feature feature : gemeindenGeojsonFeatures.getFeatures()) {
+            try {
+                Document doc = Document.parse(objectMapper.writeValueAsString(feature));
+                collection.insertOne(doc);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static FeatureCollection writeWahlkreisGeojsonFromSvg(ObjectMapper objectMapper, FeatureCollection gemeindenGeojsonFeatures) throws IOException {
         FeatureCollection wahlkreisGeojsonFeatures = getWahlkreisFeatureCollection(objectMapper);
         double[] gemeindenMinXY = getMinXY(gemeindenGeojsonFeatures);
         double[] wahlkreisMinXY = getMinXY(wahlkreisGeojsonFeatures);
@@ -252,10 +279,10 @@ public class GeojsonTransformerMain {
         double startLat = gemeindenMinXY[1];
         double diffLat = gemeindenMinXY[1] - wahlkreisMinXY[1];
         double factorLat = (gemeindenMinXY[3] - gemeindenMinXY[1]) / (wahlkreisMinXY[3] - wahlkreisMinXY[1]);
-        writeTransposedWahlkreisGeojson(objectMapper, wahlkreisGeojsonFeatures, diffLon, diffLat, startLon, startLat, factorLon, factorLat);
+        return writeTransposedWahlkreisGeojson(objectMapper, wahlkreisGeojsonFeatures, diffLon, diffLat, startLon, startLat, factorLon, factorLat);
     }
 
-    private static void writeTransposedWahlkreisGeojson(ObjectMapper objectMapper, FeatureCollection wahlkreisGeojsonFeatures,
+    private static FeatureCollection writeTransposedWahlkreisGeojson(ObjectMapper objectMapper, FeatureCollection wahlkreisGeojsonFeatures,
                                                         double diffLon, double diffLat, double startLon, double startLat,
                                                         double factorLon, double factorLat) throws IOException {
         FeatureCollection newWahlkreisColl = new FeatureCollection();
@@ -290,6 +317,7 @@ public class GeojsonTransformerMain {
 			}
         }
         objectMapper.writeValue(new File(OUT_WAHLKREISE_2_SACHSEN_GEOJSON), newWahlkreisColl);
+        return newWahlkreisColl;
     }
 
 	private static List<LngLatAlt> getLngLatAlts(double diffLon, double diffLat, double startLon, double startLat, double factorLon,
@@ -503,12 +531,12 @@ public class GeojsonTransformerMain {
 
     private static void writeNamesToFiles(List<String> allNames, List<String> notFoundNames, List<String> foundNames)
             throws IOException {
-        writeNameListToFile("out/names_all.csv", allNames);
-        writeNameListToFile("out/names_not_found.csv", notFoundNames);
-        writeNameListToFile("out/names_found.csv", foundNames);
+        writeNameListToFile(outFolder + "names_all.csv", allNames);
+        writeNameListToFile(outFolder + "names_not_found.csv", notFoundNames);
+        writeNameListToFile(outFolder + "names_found.csv", foundNames);
         List<String> allGiven = wahlkreisNrToGemeinden.values().stream().flatMap(Collection::stream)
                 .collect(Collectors.toList());
-        writeNameListToFile("out/names_all_given.csv", allGiven);
+        writeNameListToFile(outFolder + "names_all_given.csv", allGiven);
     }
 
     private static void writeNameListToFile(String outFileName, List<String> names) throws IOException {
