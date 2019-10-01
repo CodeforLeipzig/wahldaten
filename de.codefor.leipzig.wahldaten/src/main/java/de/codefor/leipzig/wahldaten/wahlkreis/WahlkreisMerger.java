@@ -21,7 +21,7 @@ import static de.codefor.leipzig.wahldaten.GemeindeHandler.writeGemeindenGeojson
 import static de.codefor.leipzig.wahldaten.utils.PolygonMerger.*;
 import static de.codefor.leipzig.wahldaten.wahlkreis.WahlkreisFeatureHandler.createAndAddFeature;
 
-class WahlkreisMerger {
+public class WahlkreisMerger {
     private static final String WAHLKREIS_NR = "WahlkreisNr";
     private static final String OUT_WAHLKREISE_SACHSEN_GEOJSON = docsFolder + "wahlkreise_sachsen.geojson";
 
@@ -33,7 +33,7 @@ class WahlkreisMerger {
         writeWahlkreisGeojson(objectMapper, gemeindenGeojsonFeatures);
     }
 
-    static void writeWahlkreisGeojson(ObjectMapper objectMapper, FeatureCollection gemeindenGeojsonFeatures)
+    public static void writeWahlkreisGeojson(ObjectMapper objectMapper, FeatureCollection gemeindenGeojsonFeatures)
             throws IOException {
         Map<Object, java.util.List<Polygon>> mergeMap = collectPolygonsPerWahlkreis(gemeindenGeojsonFeatures, COORD_PRECISION);
         FeatureCollection newWahlkreisColl = new FeatureCollection();
@@ -41,6 +41,9 @@ class WahlkreisMerger {
             if (!entry.getValue().isEmpty()) {
                 Area area = createMergedArea(entry);
                 List<LngLatAlt> geoCoords = getCoordsFromArea(area);
+                if (!geoCoords.isEmpty() && geoCoords.get(0) != geoCoords.get(geoCoords.size()-1)) {
+                    geoCoords.add(geoCoords.get(0));
+                }
                 createAndAddFeature(newWahlkreisColl, entry, geoCoords);
             }
         }
@@ -52,18 +55,24 @@ class WahlkreisMerger {
         for (Feature feature : newColl.getFeatures()) {
             Object wahlKreisNr = feature.getProperty(WAHLKREIS_NR);
             if (wahlKreisNr != null && feature.getGeometry() instanceof org.geojson.Polygon) {
-                Polygon polygon = getPolygon(precision, feature);
+                Polygon polygon = getPolygon(precision, ((org.geojson.Polygon) feature.getGeometry()).getCoordinates());
                 List<Polygon> list = getPolygons(mergeMap, feature, wahlKreisNr, polygon);
                 mergeMap.put(wahlKreisNr, list);
+            } else if (wahlKreisNr != null && feature.getGeometry() instanceof org.geojson.MultiPolygon) {
+                org.geojson.MultiPolygon multi = (org.geojson.MultiPolygon) feature.getGeometry();
+                for (List<List<LngLatAlt>> coordsList : multi.getCoordinates()) {
+                    Polygon polygon = getPolygon(precision, coordsList);
+                    List<Polygon> list = getPolygons(mergeMap, feature, wahlKreisNr, polygon);
+                    mergeMap.put(wahlKreisNr, list);
+                }
             }
         }
         return mergeMap;
     }
 
-    private static Polygon getPolygon(int precision, Feature feature) {
+    private static Polygon getPolygon(int precision, List<List<LngLatAlt>> coordsList) {
         Polygon polygon = new Polygon();
-        org.geojson.Polygon geojsonPolygon = (org.geojson.Polygon) feature.getGeometry();
-        for (List<LngLatAlt> list : geojsonPolygon.getCoordinates()) {
+        for (List<LngLatAlt> list : coordsList) {
             for (LngLatAlt coord : list) {
                 polygon.addPoint(Double.valueOf(coord.getLongitude() * precision).intValue(),
                         Double.valueOf(coord.getLatitude() * precision).intValue());

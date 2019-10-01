@@ -7,6 +7,7 @@ import de.codefor.leipzig.wahldaten.wahlkreis.model.Wahlkreise;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static de.codefor.leipzig.wahldaten.Constants.inFolder;
 import static de.codefor.leipzig.wahldaten.utils.GeojsonUtils.getJsonFileContent;
@@ -21,7 +22,7 @@ public class PlzWahlkreisHandler {
         System.out.println(wahlkreise);
     }
 
-    static Wahlkreise getWahlkreise(ObjectMapper objectMapper) throws IOException {
+    public static Wahlkreise getWahlkreise(ObjectMapper objectMapper) throws IOException {
         return getJsonFileContent(IN_PLZ_WAHLKREIS_JSON, objectMapper, Wahlkreise.class);
     }
 }
