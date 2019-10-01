@@ -33,9 +33,9 @@
 			contentType: "application/json; charset=utf-8"
 		});
 
-		var colors = ["brown","lightblue", "red", "black"]
-		var names = [ "plz", "gemeinden", "wahlkreise", "wahlkreise2" ];
-		var lineStrokeWeights = [2, 6, 8];
+		var colors = [ "black", "blue", "red" ]
+		var names = [ "wahlkreise", "gemeinden", "plz" ];
+		var lineStrokeWeights = [8, 4, 2];
 
 		var polygonMittelpunkt = function (arr) {
 			var arrToUse;
@@ -59,10 +59,14 @@
 					var props = ereignis.layer.feature.properties;
 					var wahlkreisNr = props.WahlkreisNr
 					var wahlkreisName = props.WahlkreisName
-					var wahlkreisOrte = props.WahlkreisOrte
+					var wahlkreisGemeinden = props.WahlkreisGemeinden
+					var wahlkreisOrtsteile = props.WahlkreisOrtsteile
+					var wahlkreisPostleitzahlen = props.WahlkreisPostleitzahlen
 					geojsonEbenenHover = L.popup()
 						.setLatLng(hoverKoordinaten)
-						.setContent(wahlkreisNr + ": " + wahlkreisName + "<br />" + wahlkreisOrte)
+						.setContent(wahlkreisNr + ": " + wahlkreisName + "<br />" 
+							+ wahlkreisGemeinden
+						)
 						.openOn(karte);
 				}
 			});
@@ -117,10 +121,7 @@
 				}
 			});
 		};
-		var wahlkreis2EventHandler = function(geojsonEbene) {
-		};
-
-		var eventHandlerFunctions = [ eventHandlerPlz, eventHandlerGemeinden, wahlkreisEventHandler, wahlkreis2EventHandler ];
+		var eventHandlerFunctions = [ wahlkreisEventHandler, eventHandlerGemeinden, eventHandlerPlz  ];
 
 		var createGeoJsonLayer = function (data, colorName, weight) {
 			var style = {

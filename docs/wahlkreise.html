@@ -55,10 +55,10 @@
 				if (karte) {
 					var wahlkreisNr = ereignis.layer.feature.properties.WahlkreisNr
 					var wahlkreisName = ereignis.layer.feature.properties.WahlkreisName
-					var wahlkreisOrte = ereignis.layer.feature.properties.WahlkreisOrte
+					var wahlkreisGemeinden = ereignis.layer.feature.properties.WahlkreisGemeinden
 					geojsonEbenenHover = L.popup()
 						.setLatLng(hoverKoordinaten)
-						.setContent(wahlkreisNr + ": " + wahlkreisName + "<br />" + wahlkreisOrte)
+						.setContent(wahlkreisNr + ": " + wahlkreisName + "<br />" + wahlkreisGemeinden)
 						.openOn(karte);
 				}
 			});

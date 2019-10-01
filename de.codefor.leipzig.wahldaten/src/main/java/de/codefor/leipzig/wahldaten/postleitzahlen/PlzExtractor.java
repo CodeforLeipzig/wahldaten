@@ -26,6 +26,7 @@ import static de.codefor.leipzig.wahldaten.utils.GeojsonUtils.getFeatureCollecti
 import static de.codefor.leipzig.wahldaten.utils.MongoUtils.writeToMongoDB;
 import static de.codefor.leipzig.wahldaten.wahlkreis.PlzWahlkreisHandler.getWahlkreise;
 import static de.codefor.leipzig.wahldaten.wahlkreis.WahlkreisMerger.writeWahlkreisGeojson;
+import static de.codefor.leipzig.wahldaten.wahlkreis.WahlkreisMerger.writeWahlkreisGeojsonMulti;
 
 public class PlzExtractor {
 
@@ -36,8 +37,9 @@ public class PlzExtractor {
         //writePLZDeutschland(objectMapper);
         //writeSachsenGeojson();
         //writePlzsWithinSachsenGeojson(objectMapper);
-        FeatureCollection sachsenPlzGeojson = writeSachsenPlzGeojson(objectMapper);
-        writeWahlkreisGeojson(objectMapper, sachsenPlzGeojson);
+        //FeatureCollection sachsenPlzGeojson = writeSachsenPlzGeojson(objectMapper);
+        FeatureCollection sachsenPlzGeojson = getFeatureCollection("D:/wahlkreise_sachsen_aufgeloest.geojson", objectMapper);
+        writeWahlkreisGeojsonMulti(objectMapper, sachsenPlzGeojson);
     }
 
     private static FeatureCollection writeSachsenPlzGeojson(ObjectMapper objectMapper) throws IOException {
