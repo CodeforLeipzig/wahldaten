@@ -1,0 +1,200 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Sächsische Wahlkreise</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css"
+       integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA=="
+       crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
+       integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
+       crossorigin=""></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<style>
+		#KarteMitPunkt { height: 900px; }
+	</style>
+  </head>
+  <body>
+    <p>
+      <div id="KarteMitPunkt" />
+    </p>
+    <script>
+		var laengenGrad = 12.6089036;
+		var breitenGrad = 51.3346604;
+		var kartenMittelpunktKoordinaten = [breitenGrad, laengenGrad];
+		var zoomStufe = 17;
+		var karte = L.map('KarteMitPunkt').setView(kartenMittelpunktKoordinaten, zoomStufe);
+		var baseMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+		});
+
+		$.ajaxSetup({
+			scriptCharset: "utf-8",
+			contentType: "application/json; charset=utf-8"
+		});
+
+		var colors = [ "black", "blue", "red" ]
+		var names = [ "wahlkreise", "gemeinden", "plz" ];
+		var lineStrokeWeights = [8, 4, 2];
+
+		var polygonMittelpunkt = function (arr) {
+			var arrToUse;
+			if (arr.length == 1) {
+				arrToUse = arr[0];
+			} else {
+				arrToUse = arr;
+			}
+			return arrToUse.reduce(function (x, y) {
+				return [x[0] + y[0] / arrToUse.length, x[1] + y[1] / arrToUse.length]
+			}, [0, 0])
+		};
+
+		var wahlkreisEventHandler = function(geojsonEbene) {
+			var geojsonEbenenHover;
+			geojsonEbene.on('mouseover', function (ereignis) {
+				var koordinaten = ereignis.layer.feature.geometry.coordinates;
+				var centroid = polygonMittelpunkt(koordinaten[0])
+					var hoverKoordinaten = [centroid[1], centroid[0]];
+				if (karte) {
+					var props = ereignis.layer.feature.properties;
+					var wahlkreisNr = props.WahlkreisNr
+					var wahlkreisName = props.WahlkreisName
+					var wahlkreisGemeinden = props.WahlkreisGemeinden
+					var wahlkreisOrtsteile = props.WahlkreisOrtsteile
+					var wahlkreisPostleitzahlen = props.WahlkreisPostleitzahlen
+					geojsonEbenenHover = L.popup()
+						.setLatLng(hoverKoordinaten)
+						.setContent(wahlkreisNr + ": " + wahlkreisName + "<br />" 
+							+ wahlkreisGemeinden
+						)
+						.openOn(karte);
+				}
+			});
+			geojsonEbene.on('mouseout', function (ereignis) {
+				if (geojsonEbenenHover && karte) {
+					karte.closePopup(geojsonEbenenHover);
+					geojsonEbenenHover = null;
+				}
+			});
+		};
+
+		var eventHandlerPlz = function(geojsonEbene) {
+			var geojsonEbenenHover;
+			geojsonEbene.on('mouseover', function (ereignis) {
+				var koordinaten = ereignis.layer.feature.geometry.coordinates;
+				var centroid = polygonMittelpunkt(koordinaten[0])
+					var hoverKoordinaten = [centroid[1], centroid[0]];
+				if (karte) {
+					var props = ereignis.layer.feature.properties;
+					var name = props.note + " (Wahlkreis: " + props.WahlkreisNr + ")";
+					geojsonEbenenHover = L.popup()
+						.setLatLng(hoverKoordinaten)
+						.setContent(name)
+						.openOn(karte);
+				}
+			});
+			geojsonEbene.on('mouseout', function (ereignis) {
+				if (geojsonEbenenHover && karte) {
+					karte.closePopup(geojsonEbenenHover);
+					geojsonEbenenHover = null;
+				}
+			});
+		};
+		var eventHandlerGemeinden = function(geojsonEbene) {
+			var geojsonEbenenHover;
+			geojsonEbene.on('mouseover', function (ereignis) {
+				var koordinaten = ereignis.layer.feature.geometry.coordinates;
+				var centroid = polygonMittelpunkt(koordinaten[0])
+					var hoverKoordinaten = [centroid[1], centroid[0]];
+				if (karte) {
+					var name = ereignis.layer.feature.properties.name
+					geojsonEbenenHover = L.popup()
+						.setLatLng(hoverKoordinaten)
+						.setContent(name)
+						.openOn(karte);
+				}
+			});
+			geojsonEbene.on('mouseout', function (ereignis) {
+				if (geojsonEbenenHover && karte) {
+					karte.closePopup(geojsonEbenenHover);
+					geojsonEbenenHover = null;
+				}
+			});
+		};
+		var eventHandlerFunctions = [ wahlkreisEventHandler, eventHandlerGemeinden, eventHandlerPlz  ];
+
+		var createGeoJsonLayer = function (data, colorName, weight) {
+			var style = {
+				weight: weight,
+				color: colorName,
+				fillOpacity: 0
+			}
+			return L.geoJson(data, style);
+		};
+		var layerLegendKey = function (name) {
+			var color = colors[names.indexOf(name)];
+			return "<span style='color: " + color + "'> " + name + "</span>"		
+		};
+
+		var handleGeoJsonLayers = function (dataList) {
+			var overlayMaps = {};
+			for (var j = 0; j < dataList.length; j++) {
+				var entry = dataList[j]
+				overlayMaps[layerLegendKey(entry.name)] = entry.geoJsonLayer;
+			}
+			var webatlasOptions = {
+				layers: 'Siedlung,Vegetation,Gewaesser,Verkehr,Adminstrative_Einheiten,Beschriftung'
+			};
+			var webatlasLayer = L.tileLayer.wms('https://geodienste.sachsen.de/wms_geosn_webatlas-sn/guest', webatlasOptions);
+			var rohdopOptions = {
+				layers: 'sn_rohdop_020'
+			};
+			var rohdopLayer = L.tileLayer.wms('https://geodienste.sachsen.de/wms_geosn_rohdop-rgb/guest', rohdopOptions);
+			var rohdopOptions2014 = {
+				layers: 'dop_2012_2014_rgb'
+			};
+			var rohdopLayer2014 = L.tileLayer.wms('https://geodienste.sachsen.de/wms_geosn_dop_2012_2014/guest', rohdopOptions2014);
+			
+			var imageUrl = 'https://codeforleipzig.github.io/wahldaten/Landtagswahlkreise_Sachsen_2014.svg';
+			// https://gist.github.com/JamesChevalier/b03b7423bf330f959076
+			var xMin = 11.8874255;
+			var xMax = 15.0419319;
+			var yMin = 50.3749165;
+			var yMax = 51.5972426;
+	
+			var imageBounds = [[yMin, xMin], [yMax, xMax]];
+			var imageLayer = L.imageOverlay(imageUrl, imageBounds);
+	
+			var baseMaps = {
+				"OSM": baseMap,
+				"geodienste.sachsen.de webatlas WMS": webatlasLayer,
+				"geodienste.sachsen.de rohdop WMS 2012 - 2014": rohdopLayer2014,
+				"geodienste.sachsen.de rohdop WMS 2018": rohdopLayer,
+				//"Wikipedia SVG Wahlkreise 2014": imageLayer
+			};
+			L.control.layers(baseMaps, overlayMaps).addTo(karte);
+			rohdopLayer.addTo(karte);
+			names.forEach(name => overlayMaps[layerLegendKey(name)].addTo(karte));
+			names.forEach(name => eventHandlerFunctions[names.indexOf(name)](overlayMaps[layerLegendKey(name)]));
+		};
+
+
+		var promises = [];
+		for (var i = 0; i < names.length; i++) {
+			var name = names[i]
+			var color = colors[i];	
+			var lineStrokeWeight = lineStrokeWeights[i];
+			var path = `${name}_sachsen.geojson`;
+			var promise = Promise.all([$.getJSON(path), Promise.resolve(color), 
+				Promise.resolve(lineStrokeWeight), Promise.resolve(name)])
+			promises.push(promise.then(data => { 
+				return { 
+					geoJsonLayer: createGeoJsonLayer(data[0], data[1], data[2]), 
+					name: data[3]
+				} 
+			}));
+		}
+		Promise.all(promises).then(dataList => handleGeoJsonLayers(dataList));
+     </script>
+  </body>
+</html>
